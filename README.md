@@ -32,7 +32,6 @@ You will be prompted for a series of inputs.
 
 #### For each unique category:
 - **What is the name of category _#_?**
-   - When entering this name, use `_` if a space is desired.
    - If for whatever reason, the number of characters of this name is larger than 20, you can adjust the max size by changing it in line 6 of the *grade.c* file.
 - **How many assignments are there in [_category name_]?**
    - This should be relatively straight forward, but if including extra credit in one category, be sure to include total number of extra credit assignments.
@@ -42,10 +41,10 @@ You will be prompted for a series of inputs.
    - Enter as a number.
 - **What are the names of the assignments?**
    - While the category may be something like Homework, the assignment names are more like it's written in the gradebook (Example: `HW1` or `HW01` or `HW 1`).
-   - The same consideration as for naming the category apply ( `_` for space).
    - To name it, a `#` symbol must be included to represent the number for each assignment (Example: `HW_#` if the desired outputs are `HW 1`, `HW 2`, `HW 3`, etc.)
    - If a preceding 0 is used such as in `HW01`, use 2 `#` symbols (Example: `HW##` if the desired outputs are `HW01`, `HW02`, `HW03`, etc.)
    - If there is no numbering desired for this category at all, use `!` in place of a `#` symbol (Example: `HW!` would make all assignment names `HW`.  Additonally, using exclusively `!` will result in no names for any assignment in this category).
+   - If you want to type out the individual names of the assignments for this given category, type `*!`
    - If the starting assignment isn't 1, you can alter the starting number by adding a `*` and then adding a number to correspond with it (Example: `HW_#*0` which will display `HW 0`, `HW 1`, `HW 2`, etc.)
 - **(If % weighting) What is the weight of this category?**
    - Enter the weighting of this specific category (Example: If homework is 15% of the total grade, enter 15).
@@ -55,9 +54,11 @@ You will be prompted for a series of inputs.
    - If a certain number of drops are guaranteed to occur, enter that here.
    - Enter as a number.
 
-3. (If P weighting) If the total points is not #, enter the actual number now (otherwise type !).
+3. (If individual assignment names) What is the name of assignment `#` of the [*category name*] category?
+   - Name the individual assignment here. 
+4. (If P weighting) If the total points is not #, enter the actual number now (otherwise type !).
    - Enter either as a number or just `!`
-4. A .csv file as named will now be created.
+5. A .csv file as named will now be created.
 
 ## Excel File
 Because what is being created is a csv file and not an actual excel file, the actual formatting needs to be done in the file itself.  How you ultimately choose to format your excel file is ultimately up to you, but I will list what I like to do here in case you want to follow it.  While this may seem needlessly tedious, I think it makes the sheet significantly more readable and aethetically pleasing.
@@ -123,10 +124,15 @@ The final results should look something like this:
 Simply enter your scores and the excel will do the rest of the work.
 
 # To Do
-- [ ] Make question for assignment names more intuitive
-- [ ] Add option for inserting individual assignment names if desired (perhaps if just ! is used)
+- [x] Make question for assignment names more intuitive
+- [x] Add option for inserting individual assignment names if desired (perhaps if just ! is used)
+- [ ] Create consistency in getting inputs (input verification)
 - [ ] Add option for inserting individual assignment point values/percent if desired
 - [ ] Fix memory issues
 - [ ] Ensure points works properly
 - [ ] Include optional drops
 - [ ] Include option to reenter if number/name entered incorrectly
+- [ ] Include potential example output for double checking
+- [ ] Include excel file option for input
+- [ ] Make sure csv file is input
+- [ ] Break up input into individual functions
