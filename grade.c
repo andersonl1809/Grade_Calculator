@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+
 #define MAX_SIZE 20
 
 Category *buildCategories(int numCats)
@@ -11,221 +12,470 @@ Category *buildCategories(int numCats)
   return categories;
 }
 
+long double powrInt(float x, int y)
+{
+  if (y < 0)
+  {
+    x = 1 / x;
+    y *= -1;
+  }
+
+  long double num = x;
+  for (int i = 1; i < y; i++)
+  {
+    num *= x;
+  }
+  return num;
+}
+
 GradeDoc getInputs()
 {
+  GradeDoc grdDoc;
   // get number of categories
-  int numCats; // number of categories
-  for (;;)
-  {
-    printf("\nHow many categories are there? ");
-    scanf("%d", &numCats);
-
-    if (numCats > 0 && numCats < 15)
-    {
-      break;
-    }
-    printf("Invalid input. Enter number between 1 and 14.\n");
-  }
+  getNumCats(&grdDoc); // number of categories
 
   // construct array of categories
-  Category *categories = buildCategories(numCats);
+  grdDoc.cat = buildCategories(grdDoc.numCats);
 
   // initialize all weight types to corresponding type
-  char wtType; // weight type (points or percent)
-
-  for (;;)
-  {
-    printf("\nAre categories weighted by points (P) or percent (%%)? ");
-    do
-    {
-      scanf("%c", &wtType);
-    } while (wtType == '\n');
-
-    if (wtType == Points || wtType == Percent)
-      break;
-    printf("Invalid Input. Enter P or %%.\n");
-  }
+  getWtType(&grdDoc);
 
   // sets starting excel row for categories
   int currRow = 4;
 
-  // do for each category
-  for (int catNum = 0; catNum < numCats; catNum++)
-  {
-    char tempCatName[MAX_SIZE];
-    int sizeCatName = 0;
+  void (*inputs[])(GradeDoc *, int) = {getCatName, getAssNum, getNumPnts, getAssName, getWeightVal, getDrops};
 
-    // get category name
-    printf("\nWhat is the name of category %d? ", catNum + 1);
+  // do for each category
+  for (int catNum = 0; catNum < grdDoc.numCats; catNum++)
+  {
+    for (int i = 0; i < 6; i++)
+    {
+      inputs[i](&grdDoc, catNum);
+    }
+
+    // initialize start and end rows
+    grdDoc.cat[catNum].strtRow = currRow;
+    grdDoc.cat[catNum].endRow = currRow + grdDoc.cat[catNum].numAsnmnts + 1;
+    currRow = grdDoc.cat[catNum].endRow + 2;
+  }
+  return grdDoc;
+}
+
+void getNumCats(GradeDoc *grdDoc)
+{
+  grdDoc->numCats = 0;
+  char tempNumCats[MAX_SIZE];
+  do
+  {
+    printf("\nHow many categories are there? ");
     for (int i = 0; i < MAX_SIZE; i++)
     {
       if (i == 0)
       {
         do
         {
-          tempCatName[i] = getc(stdin);
-        } while (tempCatName[i] == '\n');
+          tempNumCats[i] = getc(stdin);
+        } while (tempNumCats[i] == '\n');
       }
       else
       {
-        tempCatName[i] = getc(stdin);
+        tempNumCats[i] = getc(stdin);
       }
 
-      if (tempCatName[i] == '\n' || tempCatName[i] == '\0')
+      if (tempNumCats[i] == '\n' || tempNumCats[i] == '\0')
       {
-        tempCatName[i] = '\0';
-        sizeCatName = i + 1;
+        tempNumCats[i] = '\0';
+        int num = 0; // number to print
+        for (int j = 0; j < i; j++)
+        {
+          num = 10 * num + (tempNumCats[j] - '0');
+        }
+        grdDoc->numCats = num;
+        break;
+      }
+
+      if (tempNumCats[i] - '0' < 0 || tempNumCats[i] - '0' >= 10)
+      {
+        grdDoc->numCats = 0;
+        char tempChar;
+        do
+        {
+          tempChar = getc(stdin);
+        } while (tempChar != '\n' && tempChar != '\0');
+        break;
+      }
+    }
+    if (grdDoc->numCats == 0)
+      printf("Error: Please enter a valid positive integer.\n");
+  } while (grdDoc->numCats == 0);
+}
+
+void getWtType(GradeDoc *grdDoc)
+{
+  char tempWtType[MAX_SIZE];
+  do
+  {
+    printf("\nAre categories weighted by points (P) or percent (%%)? ");
+    for (int i = 0; i < MAX_SIZE; i++)
+    {
+      if (i == 0)
+      {
+        do
+        {
+          tempWtType[i] = getc(stdin);
+        } while (tempWtType[i] == '\n');
+      }
+      else
+      {
+        tempWtType[i] = getc(stdin);
+      }
+
+      if (tempWtType[i] == '\n' || tempWtType[i] == '\0')
+      {
+        tempWtType[i] = '\0';
+        if (tempWtType[0] == '%')
+          grdDoc->wtType = Percent;
+        else
+          grdDoc->wtType = Points;
+        break;
+      }
+
+      if (tempWtType[i] != 'P' && tempWtType[i] != '%' && tempWtType[i] != 'p')
+      {
+        grdDoc->wtType = ' ';
+        char tempChar;
+        do
+        {
+          tempChar = getc(stdin);
+        } while (tempChar != '\n' && tempChar != '\0');
+        break;
+      }
+    }
+    if (grdDoc->wtType != Points && grdDoc->wtType != Percent)
+      printf("Error: Please enter either P or %%.\n");
+  } while (grdDoc->wtType != Points && grdDoc->wtType != Percent);
+}
+
+void getCatName(GradeDoc *grdDoc, int catNum)
+{
+  char tempCatName[MAX_SIZE];
+  int sizeCatName = 0;
+
+  printf("\nWhat is the name of category %d? ", catNum + 1);
+
+  // get number of assignments
+  for (int i = 0; i < MAX_SIZE; i++)
+  {
+    if (i == 0)
+    {
+      do
+      {
+        tempCatName[i] = getc(stdin);
+      } while (tempCatName[i] == '\n');
+    }
+    else
+    {
+      tempCatName[i] = getc(stdin);
+    }
+
+    if (tempCatName[i] == '\n' || tempCatName[i] == '\0')
+    {
+      tempCatName[i] = '\0';
+      sizeCatName = i + 1;
+      break;
+    }
+  }
+
+  grdDoc->cat[catNum].catName = malloc(sizeof(char) * sizeCatName);
+  for (int i = 0; i < sizeCatName; i++)
+  {
+    grdDoc->cat[catNum].catName[i] = tempCatName[i];
+  }
+}
+
+void getAssNum(GradeDoc *grdDoc, int catNum)
+{
+  grdDoc->cat[catNum].numAsnmnts = 0;
+  char tempNumAss[MAX_SIZE];
+  do
+  {
+    printf("\nHow many assignments are there in %s? ", grdDoc->cat[catNum].catName);
+    for (int i = 0; i < MAX_SIZE; i++)
+    {
+      if (i == 0)
+      {
+        do
+        {
+          tempNumAss[i] = getc(stdin);
+        } while (tempNumAss[i] == '\n');
+      }
+      else
+      {
+        tempNumAss[i] = getc(stdin);
+      }
+
+      if (tempNumAss[i] == '\n' || tempNumAss[i] == '\0')
+      {
+        tempNumAss[i] = '\0';
+        int num = 0; // number to print
+        for (int j = 0; j < i; j++)
+        {
+          num = 10 * num + (tempNumAss[j] - '0');
+        }
+        grdDoc->cat[catNum].numAsnmnts = num;
+        break;
+      }
+
+      if (tempNumAss[i] - '0' < 0 || tempNumAss[i] - '0' >= 10)
+      {
+        grdDoc->cat[catNum].numAsnmnts = 0;
+        char tempChar;
+        do
+        {
+          tempChar = getc(stdin);
+        } while (tempChar != '\n' && tempChar != '\0');
+        break;
+      }
+    }
+    if (grdDoc->cat[catNum].numAsnmnts == 0)
+      printf("Error: Please enter a valid positive integer.\n");
+  } while (grdDoc->cat[catNum].numAsnmnts == 0);
+}
+
+void getNumPnts(GradeDoc *grdDoc, int catNum)
+{
+  grdDoc->cat[catNum].numPnts = 0;
+  char tempNumPnts[MAX_SIZE];
+  do
+  {
+    printf("\nHow many points are there for each assignment? ");
+    for (int i = 0; i < MAX_SIZE; i++)
+    {
+      if (i == 0)
+      {
+        do
+        {
+          tempNumPnts[i] = getc(stdin);
+        } while (tempNumPnts[i] == '\n');
+      }
+      else
+      {
+        tempNumPnts[i] = getc(stdin);
+      }
+
+      if (tempNumPnts[i] == '\n' || tempNumPnts[i] == '\0')
+      {
+        tempNumPnts[i] = '\0';
+        int num = 0; // number to print
+        for (int j = 0; j < i; j++)
+        {
+          num = 10 * num + (tempNumPnts[j] - '0');
+        }
+        grdDoc->cat[catNum].numPnts = num;
+        break;
+      }
+
+      if (tempNumPnts[i] - '0' < 0 || tempNumPnts[i] - '0' >= 10)
+      {
+        grdDoc->cat[catNum].numPnts = 0;
+        char tempChar;
+        do
+        {
+          tempChar = getc(stdin);
+        } while (tempChar != '\n' && tempChar != '\0');
+        break;
+      }
+    }
+    if (grdDoc->cat[catNum].numPnts == 0)
+      printf("Error: Please enter a valid positive integer.\n");
+  } while (grdDoc->cat[catNum].numPnts == 0);
+}
+
+void getAssName(GradeDoc *grdDoc, int catNum)
+{
+  char tempAssName[MAX_SIZE];
+  int sizeAssName = 0;
+
+  do
+  {
+    printf("\nWhat are the names of the assignments with the following format:\n  * If each assignment has a numerical value attached, it must use a # where the number should go:\n    - Example 1: HW# would display HW1, HW2, etc.\n    - Example 2: HW## would display HW01, HW02, etc.\n  * Use a ! in place of # if no number is desired\n    - Example 1: HW! would display HW, HW, etc.\n    - Example 2: *! would allow for individual assignments to be typed out\n  * If assignments don't start at 1, append *# where # is the starting number\n    - Example: HW #*0 would display HW 0, HW 1, etc.\n");
+
+    // get number of assignments
+    for (int i = 0; i < MAX_SIZE; i++)
+    {
+      if (i == 0)
+      {
+        do
+        {
+          tempAssName[i] = getc(stdin);
+        } while (tempAssName[i] == '\n');
+      }
+      else
+      {
+        tempAssName[i] = getc(stdin);
+      }
+
+      if (tempAssName[i] == '\n' || tempAssName[i] == '\0')
+      {
+        tempAssName[i] = '\0';
+        sizeAssName = i + 1;
         break;
       }
     }
 
-    categories[catNum].catName = malloc(sizeof(char) * sizeCatName);
-    for (int i = 0; i < sizeCatName; i++)
+    if (checkAssName(tempAssName) == false)
     {
-      categories[catNum].catName[i] = tempCatName[i];
+      printf("Error: Assignment name invalid: Please double check the formatting.\n");
+      continue;
     }
 
-    // get number of assignments
+    grdDoc->cat[catNum].assName = malloc(sizeof(char) * sizeAssName);
+    for (int i = 0; i < sizeAssName; i++)
+    {
+      grdDoc->cat[catNum].assName[i] = tempAssName[i];
+    }
+
+  } while (checkAssName(tempAssName) == false);
+}
+
+void getWeightVal(GradeDoc *grdDoc, int catNum)
+{
+  if (grdDoc->wtType == Points)
+  {
+    grdDoc->cat[catNum].weightVal.pnts = grdDoc->cat[catNum].numAsnmnts * grdDoc->cat[catNum].numPnts;
+  }
+  else
+  {
+    char tempWtVal[MAX_SIZE];
+    grdDoc->cat[catNum].weightVal.prcnt = 0;
+    int numDec = 0; // number of decimals read in
+
     do
     {
-      printf("\nHow many assignments are there in %s? ", categories[catNum].catName);
+      printf("\nWhat is the weight of this category (in percent)? ");
       for (int i = 0; i < MAX_SIZE; i++)
       {
         if (i == 0)
         {
           do
           {
-            tempCatName[i] = getc(stdin);
-          } while (tempCatName[i] == '\n');
+            tempWtVal[i] = getc(stdin);
+          } while (tempWtVal[i] == '\n');
         }
         else
         {
-          tempCatName[i] = getc(stdin);
+          tempWtVal[i] = getc(stdin);
         }
 
-        if (tempCatName[i] == '\n' || tempCatName[i] == '\0')
+        if (tempWtVal[i] == '\n' || tempWtVal[i] == '\0')
         {
-          tempCatName[i] = '\0';
-          int num = 0; // number to print
-          for(int j = 0; j < i; j++){
-            num = 10 * num + (tempCatName[j] - '0');
-          } 
-          categories[catNum].numAsnmnts = num;
+          tempWtVal[i] = '\0';
+          float num = 0; // number to print
+          for (int j = 0; j < i; j++)
+          {
+            if (tempWtVal[i] == '.')
+            {
+              for (int k = j + 1; k < i; k++)
+              {
+                num += (tempWtVal[k] - '0') * powrInt(10, j - k);
+              }
+              break;
+            }
+            else
+              num = 10 * num + (tempWtVal[j] - '0');
+          }
+          grdDoc->cat[catNum].weightVal.prcnt = num;
           break;
         }
 
-        if(tempCatName[i] - '0' < 0 || tempCatName[i] - '0' >= 10)
+        if (tempWtVal[i] == '.')
         {
-          categories[catNum].numAsnmnts = 0;
+          if (++numDec > 1)
+            break;
+        }
+
+        else if (tempWtVal[i] - '0' < 0 || tempWtVal[i] - '0' >= 10)
+        {
+          grdDoc->cat[catNum].weightVal.prcnt = 0;
           char tempChar;
-          do{
-            tempChar = getc(stdin);
-          } while(tempChar != '\n' && tempChar != '\0');
-          break;
-        }
-      }   
-      if(categories[catNum].numAsnmnts == 0) printf("Error: Please enter a valid positive integer.\n"); 
-    } while (categories[catNum].numAsnmnts == 0);
-
-    // get number of points per assignment
-    categories[catNum].numPnts = 0;
-    do
-    { 
-      printf("\nHow many points are there for each assignment? ");
-      for (int i = 0; i < MAX_SIZE; i++)
-      {
-        if (i == 0)
-        {
           do
           {
-            tempCatName[i] = getc(stdin);
-          } while (tempCatName[i] == '\n');
-        }
-        else
-        {
-          tempCatName[i] = getc(stdin);
-        }
-
-        if (tempCatName[i] == '\n' || tempCatName[i] == '\0')
-        {
-          tempCatName[i] = '\0';
-          int num = 0; // number to print
-          for(int j = 0; j < i; j++){
-            num = 10 * num + (tempCatName[j] - '0');
-          } 
-          categories[catNum].numPnts = num;
-          break;
-        }
-
-        if(tempCatName[i] - '0' < 0 || tempCatName[i] - '0' >= 10)
-        {
-          categories[catNum].numPnts = 0;
-          char tempChar;
-          do{
             tempChar = getc(stdin);
-          } while(tempChar != '\n' && tempChar != '\0');
+          } while (tempChar != '\n' && tempChar != '\0');
           break;
         }
       }
-      if(categories[catNum].numPnts == 0) printf("Error: Please enter a valid positive integer.\n");   
-    } while (categories[catNum].numPnts == 0);
+      if (grdDoc->cat[catNum].weightVal.prcnt == 0)
+        printf("Error: Please enter a valid positive decimal value.\n");
 
-    // get assignment names
-    do
-    {
-      // if (checkAssName(categories[catNum].assName) == true)
-      printf("\nWhat are the names of the assignments with the following format:\n  * If each assignment has a numerical value attached, it must use a # where the number should go:\n    - Example 1: HW# would display HW1, HW2, etc.\n    - Example 2: HW## would display HW01, HW02, etc.\n  * To use a space, use an _ instead\n    - Example: HW_## would display HW 01, HW 02, etc.\n  * Use a ! in place of # if no number is desired\n    - Example 1: HW! would display HW, HW, etc.\n    - Example 2: *! would allow for individual assignments to be typed out\n  * If assignments don't start at 1, append *# where # is the starting number\n    - Example: HW_#*0 would display HW 0, HW 1, etc.\n");
-      scanf("%s", (categories[catNum].assName));
-    } while (checkAssName(categories[catNum].assName) == false);
+      // scanf("%f", &(grdDoc->cat[catNum].weightVal.prcnt));
+    } while (grdDoc->cat[catNum].weightVal.prcnt == 0);
+    //(wtType == Points && !((int)categories[catNum].weightVal.pnts == categories[catNum].weightVal.pnts)) || (wtType == Percent && !((float)categories[catNum].weightVal.prcnt == categories[catNum].weightVal.prcnt)));
+  }
+}
 
-    // get weighting
-    do
+void getDrops(GradeDoc *grdDoc, int catNum)
+{
+  grdDoc->cat[catNum].numDrops = 0;
+  char tempNumDrops[MAX_SIZE];
+  do
+  {
+    printf("\nHow many of these assignments are dropped? ");
+    for (int i = 0; i < MAX_SIZE; i++)
     {
-      if (wtType == Points)
+      if (i == 0)
       {
-        categories[catNum].weightVal.pnts = categories[catNum].numAsnmnts * categories[catNum].numPnts;
+        do
+        {
+          tempNumDrops[i] = getc(stdin);
+        } while (tempNumDrops[i] == '\n');
       }
       else
       {
-        printf("\nWhat is the weight of this category (in percent)? ");
-        scanf("%f", &(categories[catNum].weightVal.prcnt));
+        tempNumDrops[i] = getc(stdin);
       }
 
-    } while ((wtType == Points && !((int)categories[catNum].weightVal.pnts == categories[catNum].weightVal.pnts)) || (wtType == Percent && !((float)categories[catNum].weightVal.prcnt == categories[catNum].weightVal.prcnt)));
-
-    // get number of drops
-    categories[catNum].numDrops = -1;
-    char charDrop = ' ';
-    do
-    {
-      if (charDrop != '\0' && charDrop != '\n')
+      if (tempNumDrops[i] == '\n' || tempNumDrops[i] == '\0')
       {
-        printf("\nHow many of these assignments are dropped? ");
-      }
-      while (true)
-      {
-        charDrop = getc(stdin);
-        if (charDrop == '\0' || charDrop == '\n')
+        tempNumDrops[i] = '\0';
+        int num = 0; // number to print
+        for (int j = 0; j < i; j++)
+        {
+          num = 10 * num + (tempNumDrops[j] - '0');
+        }
+        grdDoc->cat[catNum].numDrops = num;
+        if (grdDoc->cat[catNum].numDrops <= grdDoc->cat[catNum].numAsnmnts)
           break;
-        categories[catNum].numDrops = charDrop - '0';
+        else
+        {
+          grdDoc->cat[catNum].numDrops = -1;
+          break;
+        }
       }
-    } while (categories[catNum].numDrops < 0 || categories[catNum].numDrops > 10);
 
-    // initialize start and end rows
-    categories[catNum].strtRow = currRow;
-    categories[catNum].endRow = currRow + categories[catNum].numAsnmnts + 1;
-    currRow = categories[catNum].endRow + 2;
-  }
-  GradeDoc grdDoc = {.cat = categories,
-                     .numCats = numCats,
-                     .wtType = wtType};
+      if (tempNumDrops[i] - '0' < 0 || tempNumDrops[i] - '0' >= 10)
+      {
+        grdDoc->cat[catNum].numDrops = 0;
+        char tempChar;
+        do
+        {
+          tempChar = getc(stdin);
+        } while (tempChar != '\n' && tempChar != '\0');
+        break;
+      }
+    }
 
-  return grdDoc;
+    if (grdDoc->cat[catNum].numDrops == 0)
+      printf("Error: Please enter a valid positive integer.\n");
+
+    else if (grdDoc->cat[catNum].numDrops == -1)
+      printf("Error: Please enter an integer less than or equal to the number of assignments (%d).\n", grdDoc->cat[catNum].numAsnmnts + 1);
+  } while (grdDoc->cat[catNum].numDrops <= 0);
 }
 
 bool checkAssName(char *ass)
 {
-  for (int charNum = 0; charNum < strlen(ass); charNum++)
+  for (int charNum = 0; ass[charNum] != '\0'; charNum++)
   {
     if (ass[charNum] == '#' || ass[charNum] == '!')
       return true;
@@ -290,6 +540,7 @@ void buildExcel(GradeDoc grdDoc, char *excelFile)
     fprintf(outFile, ",\"=ROUND(SUM(");
     printEndRows(outFile, 'C', endRows, grdDoc.numCats);
     fprintf(outFile, "),2)&\"\" points\"\"\"");
+    free(endRows);
   }
 
   // if percent weighting type
@@ -406,12 +657,11 @@ void buildExcel(GradeDoc grdDoc, char *excelFile)
     free(grdDoc.cat[i].assName);
   }
   free(grdDoc.cat);
-  free(endRows);
 }
 
 int *getEndRows(GradeDoc grdDoc)
 {
-  int *endRows = malloc((sizeof(int) * grdDoc.numCats) + 1);
+  int *endRows = malloc((sizeof(int) * grdDoc.numCats));
   for (int i = 0; i < grdDoc.numCats; i++)
   {
     endRows[i] = grdDoc.cat[i].endRow;
@@ -436,11 +686,18 @@ int getTotalPnts(GradeDoc grdDoc)
     if (charDrop == '!')
       return totPnts;
     if (charDrop == '\0' || charDrop == '\n')
+    {
+      totPoints[i] = '\0';
       break;
+    }
   }
-  totPnts = atoi(totPoints);
+  int num = 0; // number to print
+  for (int j = 0; totPoints[j] != '\0'; j++)
+  {
+    num = 10 * num + (totPoints[j] - '0');
+  }
 
-  return totPnts;
+  return num;
 }
 
 void printEndRows(FILE *outFile, char col, int *endRows, int size)
@@ -456,7 +713,7 @@ void printEndRows(FILE *outFile, char col, int *endRows, int size)
 int getNumPounds(char *assName)
 {
   int numPounds = 0;
-  for (int i = 0; i < strlen(assName); i++)
+  for (int i = 0; i < MAX_SIZE; i++)
   {
     if (assName[i] == '#')
       numPounds += 1;
@@ -518,14 +775,47 @@ void printRow(FILE *outFile, int assNum, Category cat, int numPnd)
   if (strlen(cat.assName) == 2 && cat.assName[0] == '*' && cat.assName[1] == '!')
   {
     char assNameIn[MAX_SIZE];
+    int sizeAssName = 0;
+
     printf("\nWhat is the name of assignment %d of the %s category? ", assNum, cat.catName);
-    scanf("%s", assNameIn);
-    for (int i = 0; i < strlen(assNameIn); i++)
+
+    // get number of assignments
+    for (int i = 0; i < MAX_SIZE; i++)
     {
-      if (assNameIn[i] == '_')
-        assNameIn[i] = ' ';
+      if (i == 0)
+      {
+        do
+        {
+          assNameIn[i] = getc(stdin);
+        } while (assNameIn[i] == '\n');
+      }
+      else
+      {
+        assNameIn[i] = getc(stdin);
+      }
+
+      if (assNameIn[i] == '\n' || assNameIn[i] == '\0')
+      {
+        assNameIn[i] = '\0';
+        sizeAssName = i + 1;
+        break;
+      }
     }
-    fprintf(outFile, "%s", assNameIn);
+
+    cat.assName = malloc(sizeof(char) * sizeAssName);
+    for (int i = 0; i < sizeAssName; i++)
+    {
+      cat.assName[i] = assNameIn[i];
+    }
+
+    // printf("\nWhat is the name of assignment %d of the %s category? ", assNum, cat.catName);
+    // scanf("%s", assNameIn);
+    // for (int i = 0; i < strlen(assNameIn); i++)
+    // {
+    //   if (assNameIn[i] == '_')
+    //     assNameIn[i] = ' ';
+    // }
+    // fprintf(outFile, "%s", assNameIn);
   }
 
   // for general assignment inputs
