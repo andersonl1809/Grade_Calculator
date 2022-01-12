@@ -16,6 +16,9 @@ all: $(OBJS) $(HDRS)
 build: $(EXEC)
 	./$(EXEC) yourGradingSheet.csv
 
+memory: build
+	$(VALGRIND) --log-file=log1 ./$(EXEC) yourGradingSheet.csv
+
 %.o : %.c
 	$(GCC) -c $< 
 

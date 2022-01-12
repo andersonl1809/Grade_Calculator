@@ -42,9 +42,49 @@ typedef struct GradeDoc
 // builds an individual category
 Category *buildCategories(int numCats);
 
+// calculates a power if power is an integer
+long double powrInt(float x, int y);
+
 // gets all inputs necessary to generate excel
 GradeDoc getInputs();
 
+// general input function
+void inputFunc(void (*f) (GradeDoc*,int));
+/*
+
+
+
+*/
+// individual input functions
+
+// gets number of categories
+void getNumCats(GradeDoc *grdDoc);
+
+// gets type of weighting present
+void getWtType(GradeDoc *grdDoc);
+
+// gets name of category
+void getCatName(GradeDoc *grdDoc, int catNum);
+
+// gets number of assignments
+void getAssNum(GradeDoc *grdDoc, int catNum);
+
+// gets number of points per assignment
+void getNumPnts(GradeDoc *grdDoc, int catNum);
+
+// gets assignment names
+void getAssName(GradeDoc *grdDoc, int catNum);
+
+// gets weighting value
+void getWeightVal(GradeDoc *grdDoc, int catNum);
+
+// gets number of assignment drops
+void getDrops(GradeDoc *grdDoc, int catNum);
+/*
+
+
+
+*/
 // checks whether assignment names is valid
 bool checkAssName(char *ass);
 
@@ -74,5 +114,8 @@ int getStrtNum(char *assName);
 
 // prints all parts of drop code
 void printDrop(FILE *outFile, Category cat, int numDrop, int rowNum);
+
+// frees entire GradeDoc struct
+void freeGrdDoc(GradeDoc * grdDoc);
 
 #endif
