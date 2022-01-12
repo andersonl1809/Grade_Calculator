@@ -126,7 +126,7 @@ Simply enter your scores and the excel will do the rest of the work.
 # To Do
 - [x] Make question for assignment names more intuitive
 - [x] Add option for inserting individual assignment names if desired (perhaps if just ! is used)
-- [ ] Create consistency in getting inputs (input verification)
+- [x] Create consistency in getting inputs (input verification)
 - [ ] Add option for inserting individual assignment point values/percent if desired
 - [ ] Fix memory issues
 - [ ] Ensure points works properly
@@ -134,5 +134,5 @@ Simply enter your scores and the excel will do the rest of the work.
 - [ ] Include option to reenter if number/name entered incorrectly
 - [ ] Include potential example output for double checking
 - [ ] Include excel file option for input
-- [ ] Make sure csv file is input
-- [ ] Break up input into individual functions
+- [x] Make sure csv file is input
+- [x] Break up input into individual functions
